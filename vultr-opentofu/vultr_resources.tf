@@ -49,3 +49,13 @@ resource "vultr_ssh_key" "ansible_ssh_key" {
 }
 
 variable "ANSIBLE_SSH_KEY" {}
+
+
+output "vplm_ip" {
+  value = vultr_instance.vplmn.main_ip
+}
+
+
+output "hplm_ip" {
+  value = vultr_instance.hplmn.main_ip
+}
