@@ -1,7 +1,7 @@
 from subprocess import run
 
 
-SEPARATOR = ' '+'='*5+' '
+SEPARATOR = ' '+'='*10+' '
 
 
 class CommandLineManager():

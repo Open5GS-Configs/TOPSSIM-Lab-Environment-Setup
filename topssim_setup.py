@@ -20,54 +20,15 @@ COMMON_REQUIRED_PARAMETERS = ["ogs_repo", "hplmn_ip", "vplmn_ip", "user_ssh_key"
 LOCAL_REQUIRED_PARAMETERS = ["ram", "disk", "cpu"]
 CLOUD_REQUIRED_PARAMETERS = ["h_region", "v_region", "vultr_api_key", "vultr_plan_id", "vpc_region"]
 
-SEPARATOR = ' '+'='*5+' '
+SEPARATOR = ' '+'='*10+' '
 DEFAULT_BRANCH = "main"
+
 
 class setupTOPSSIM():
 
-    def __init__(self):
-        parser = argparse.ArgumentParser(description="Open5Gs testing environment \
-                                                    setup for the TOPSSIM project")
+    def __init__(self, config):
+        self.config = config
 
-        # These print info but stop execution
-        parser.add_argument("-VultrRegions", action='store_true', help="Shows the available regions for Vultr")
-        parser.add_argument("-VultrPlans", action='store_true', help="Shows the available plans for Vultr")
-        parser.add_argument("-readme", action='store_true', help="Prints the README")
-
-        # General Arguments
-        parser.add_argument("-c", "--config", help="Gives the path to the config file that outlines all of the information necessary to execute the program")
-        parser.add_argument("--provider", help="The VM provider that is used (Vultr, VirtualBox, VMWare, QEMU)")
-        parser.add_argument("--ogs_repo", help="The Open5GS repo that is installed to the VMs")
-        parser.add_argument("--ogs_version", help="The version (branch) of the Open5GS repo that is cloned")
-        parser.add_argument("--user_ssh_key", help="An ssh key automatically added to the authorized keys in the VMs")
-        parser.add_argument("--hplmn_ip", help="The VPC ip of the home network")
-        parser.add_argument("--vplmn_ip", help="The VPC ip of the visited network")
-        parser.add_argument("--services", help="Creates service files for OGS components in /etc/system/systemd")
-        
-        # Local Arguments
-        parser.add_argument("--ram", help="The RAM used for the VMs (LOCAL ONLY)")
-        parser.add_argument("--disk", help="The disk size allocated to the VMs (LOCAL ONLY)")
-        parser.add_argument("--cpu", help="The amount of CPU allocated to the VMs (LOCAL ONLY)")
-
-
-        # Vultr Arguments
-        parser.add_argument("--h_region", help="The region where the home VM is created")
-        parser.add_argument("--v_region", help="The region where the visited VM is created")
-        parser.add_argument("--vpc_region", help="The region where the virutal private network is created")
-        parser.add_argument("--vultr_api_key", help="Personal Vultr API key")
-        parser.add_argument("--vultr_plan_id", help="The plan used to create the VMs")
-        parser.add_argument("--vpc_v4_subnet", help="The subnet used to create the VPC betwene the VMs")
-        parser.add_argument("--vpc_v4_subnet_mask:", help="The mask for the VPC subnet")
-
-        clArgs, remaining_argv = parser.parse_known_args()
-        
-        if clArgs.config:
-            self._parseConfig(clArgs.config)
-
-            parser.set_defaults(**self.config)
-
-        self.config = vars(parser.parse_args())
-        
         self.strategy = None
         self.ansibleManager = None
         try:
@@ -98,6 +59,19 @@ class setupTOPSSIM():
         self.ansibleManager.setup()
 
 
+    def destroy(self):
+        if self.config["provider"].lower() in CLOUD_PROVIDERS:
+            strategy = OpenTofu()
+        elif self.config["provider"].lower() in LOCAL_PROVIDERS:
+            strategy = Vagrant()
+        else:
+            raise Exception("provider not recognized. Available providers are: VirtualBox, VMWare and Vultr")
+
+        strategy.destroy()
+
+        return False
+
+
     def getVultrPlans(self, apiKey):
         availVultrPlans = requests.get("https://api.vultr.com/v2/plans", headers={"Authorization": f"Bearer {apiKey}"})
 
@@ -116,19 +90,6 @@ class setupTOPSSIM():
         
         jsonVultrRegions = loads(str(availVultrRegions.content)[2:-1])['regions']
         return jsonVultrRegions
-
-
-    def _parseConfig(self, configFile):
-        print(SEPARATOR + "Reading Config File" + SEPARATOR)
-        self.config = {}
-        try:
-            f = open(configFile, 'r')
-        except FileNotFoundError:
-            print(f"Inputted config file was not found: {configFile}")
-        else:
-            with f:
-                self.config = yaml.load(f, Loader=yaml.SafeLoader)
-        print("\nFile read succesfully!")
 
 
     def _checkConfigurationValid(self):
@@ -250,7 +211,78 @@ class setupTOPSSIM():
         raise Exception(errorMsg)
 
 
-if __name__ == "__main__":
-    setup = setupTOPSSIM()
+def main():    
+    parser = argparse.ArgumentParser(description="Open5Gs testing environment \
+                                                setup for the TOPSSIM project")
 
+    # Actions
+    parser.add_argument("-destroy", action='store_true', help="Destroys all of the current VMs")
+    parser.add_argument("-restart", action='store_true', help="Destroys and restarts all of the current VMs")
+
+    # These stop execution
+    parser.add_argument("-VultrRegions", action='store_true', help="Shows the available regions for Vultr")
+    parser.add_argument("-VultrPlans", action='store_true', help="Shows the available plans for Vultr")
+    parser.add_argument("-readme", action='store_true', help="Prints the README")
+    
+    # General Arguments
+    parser.add_argument("-c", "--config", help="Gives the path to the config file that outlines all of the information necessary to execute the program")
+    parser.add_argument("--provider", help="The VM provider that is used (Vultr, VirtualBox, VMWare, QEMU)")
+    parser.add_argument("--ogs_repo", help="The Open5GS repo that is installed to the VMs")
+    parser.add_argument("--ogs_version", help="The version (branch) of the Open5GS repo that is cloned")
+    parser.add_argument("--user_ssh_key", help="An ssh key automatically added to the authorized keys in the VMs")
+    parser.add_argument("--hplmn_ip", help="The VPC ip of the home network")
+    parser.add_argument("--vplmn_ip", help="The VPC ip of the visited network")
+    parser.add_argument("--services", help="Creates service files for OGS components in /etc/system/systemd")
+    
+    # Local Arguments
+    parser.add_argument("--ram", help="The RAM used for the VMs (LOCAL ONLY)")
+    parser.add_argument("--disk", help="The disk size allocated to the VMs (LOCAL ONLY)")
+    parser.add_argument("--cpu", help="The amount of CPU allocated to the VMs (LOCAL ONLY)")
+
+
+    # Vultr Arguments
+    parser.add_argument("--h_region", help="The region where the home VM is created")
+    parser.add_argument("--v_region", help="The region where the visited VM is created")
+    parser.add_argument("--vpc_region", help="The region where the virutal private network is created")
+    parser.add_argument("--vultr_api_key", help="Personal Vultr API key")
+    parser.add_argument("--vultr_plan_id", help="The plan used to create the VMs")
+    parser.add_argument("--vpc_v4_subnet", help="The subnet used to create the VPC betwene the VMs")
+    parser.add_argument("--vpc_v4_subnet_mask:", help="The mask for the VPC subnet")
+
+    clArgs, remaining_argv = parser.parse_known_args()
+    
+    if clArgs.config:
+        fileConfig = parseConfig(clArgs.config)
+
+        parser.set_defaults(**fileConfig)
+
+    config = vars(parser.parse_args())
+    
+    
+    setup = setupTOPSSIM(config)
+
+    if config["destroy"]:
+        setup.destroy()
+        return
+    if config["restart"]:
+        setup.destroy()
     setup.setup()
+
+
+def parseConfig(configFile):
+        print(SEPARATOR + "Reading Config File" + SEPARATOR)
+        config = {}
+        try:
+            f = open(configFile, 'r')
+        except FileNotFoundError:
+            print(f"Inputted config file was not found: {configFile}")
+        else:
+            with f:
+                config = yaml.load(f, Loader=yaml.SafeLoader)
+        print("\nFile read succesfully!")
+
+        return config
+
+
+if __name__ == "__main__":
+    main()

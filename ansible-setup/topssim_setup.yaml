@@ -1,5 +1,6 @@
 - name: Wait for SSH
   hosts: all
+  tags: install_stage, config_stage, testing_stage
   gather_facts: false
   tasks:
     - name: Wait for SSH to become available
@@ -9,6 +10,7 @@
 
 - name: Installation Stage
   hosts: all
+  tags: install_stage
   roles:
     - MongoDB Install
     - Open5GS Setup
@@ -17,13 +19,20 @@
 
 - name: Configuration Stage
   hosts: all
+  tags: config_stage
   roles:
     - Open5GS Config
     - Netplan Config
 
 - name: Testing Stage
   hosts: all
+  tags: testing_stage
+  vars_files:
+    - /vars/vars.yaml
+
   tasks:
-    - name: Check Connectivity 
-      ansible.builtin.debug:
-        msg: Testing...................
+    - name: Test 5G core with builtin tests
+      ansible.builtin.command: 
+        cmd: ./build/tests/registration/registration -c /root/open5gs/build/configs/sample.yaml simple-test
+        chdir: /root/open5gs
+

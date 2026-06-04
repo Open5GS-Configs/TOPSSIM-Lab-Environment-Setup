@@ -64,7 +64,19 @@ class AnsibleManager(CommandLineManager):
                 
                         f.write(f"use_{c[0].split('_')[1]}_path: false\n")
                         f.write(f"{c[1][1:]}: {self.config[plmn + c[1]]}\n")
-                
+
+        '''
+        When a Vultr machine is created its /etc/hosts file has this information:
+        # Your system has configured 'manage_etc_hosts' as True.
+        # As a result, if you wish for changes to this file to persist
+        # then you will need to either
+        # a.) make changes to the master file in /etc/cloud/templates/hosts.debian.tmpl
+
+        This var makes it so that the hosts file is written at that address
+        '''
+        if self.config["provider"].lower() == "vultr":
+            with open("ansible-setup/vars/vars.yaml", "w") as f:
+                f.write("etc_hosts: false")
 
     def _writeInventory(self):
         newInv = INVENTORY.replace("HPLMN_PUBLIC_IP", self.config["hplmn_public_ip"])

@@ -22,7 +22,7 @@ class OpenTofu(InfrastructureManager, CommandLineManager):
         
         # self.runCommand(["tofu", "-chdir=vultr-opentofu", "show", "-show-sensitive", "-json-into=tofu-apply.json"])
 
-        print("\n\nSuccesfully create HPLMN and VPLMN machines!\n\n")
+        print("\n\nSuccesfully created HPLMN and VPLMN machines!\n\n")
 
         with open("vultr-opentofu/tofu_out.json") as f:
             outFile = f.read()
@@ -35,7 +35,12 @@ class OpenTofu(InfrastructureManager, CommandLineManager):
             config["vplmn_public_ip"] = outJson["outputs"]["vplm_ip"]["value"]
 
             print("\n\n OpenTofu completed succesfully!")
-            
+
+    
+    def destroy(self):
+        if self.runCommand(["tofu", "-chdir=vultr-opentofu", "destroy"]) != 0:
+            raise Exception("Error initiating OpenTofu")
+
             
     def populateVars(self, config):
         print("Populating OpenTofu Vars...")
