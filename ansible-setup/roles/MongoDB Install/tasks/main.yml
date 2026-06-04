@@ -39,3 +39,10 @@
     state: present
     update_cache: yes
   become: yes
+
+  
+- name: Make sure MongoDB is running and enable it 
+  ansible.builtin.systemd_service:
+    state: started
+    enabled: true
+    name: mongod

@@ -10,13 +10,12 @@ SEPARATOR = ' '+'='*5+' '
 
 class OpenTofu(InfrastructureManager, CommandLineManager):
     def callInfManager(self, config):
-        self.populateVars(config)
+        self.config = config
+        self.populateVars()
 
-        
         if self.runCommand(["tofu", "-chdir=vultr-opentofu", "init"]) != 0:
             raise Exception("Error initiating OpenTofu")
 
-            
         if self.runCommand(["tofu", "-chdir=vultr-opentofu", "apply", "-auto-approve", "-show-sensitive", "-json-into=tofu_out.json"]) != 0:
             raise Exception("Error applying OpenTofu plan") 
         
@@ -31,8 +30,8 @@ class OpenTofu(InfrastructureManager, CommandLineManager):
             # only parse last line where outputs are stores
             outJson = loads(outFile.split("\n")[-2])
 
-            config["hplmn_public_ip"] = outJson["outputs"]["hplm_ip"]["value"]
-            config["vplmn_public_ip"] = outJson["outputs"]["vplm_ip"]["value"]
+            self.config["hplmn_public_ip"] = outJson["outputs"]["hplm_ip"]["value"]
+            self.config["vplmn_public_ip"] = outJson["outputs"]["vplm_ip"]["value"]
 
             print("\n\n OpenTofu completed succesfully!")
 
@@ -42,12 +41,12 @@ class OpenTofu(InfrastructureManager, CommandLineManager):
             raise Exception("Error initiating OpenTofu")
 
             
-    def populateVars(self, config):
+    def populateVars(self):
         print("Populating OpenTofu Vars...")
 
         with open(VARS_PATH, 'w') as f:
             for var in REQ_VARS:
-                f.write(f'{var} = "{config[var]}"\n')
+                f.write(f'{var} = "{self.config[var]}"\n')
             f.write('H_HOSTNAME = "HPLMNTEST"\n')
             f.write('V_HOSTNAME = "VPLMNTEST"\n')
 

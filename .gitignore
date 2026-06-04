@@ -222,3 +222,6 @@ config.yaml
 terraform.tfstate*
 tofu_out.json
 vultr-opentofu/.terraform.tfstate.lock.info
+vultr-opentofu/tofu_out.json
+vultr-opentofu/tofu_out.json
+vultr-opentofu/terraform.tfvars

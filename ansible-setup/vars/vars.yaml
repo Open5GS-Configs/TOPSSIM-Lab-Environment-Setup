@@ -1,1 +1,3 @@
-etc_hosts: false
+---
+vplmn_test_command: "ip a"
+hplmn_test_command: ":"

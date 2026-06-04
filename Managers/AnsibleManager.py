@@ -25,17 +25,22 @@ class AnsibleManager(CommandLineManager):
         self.config = config
 
 
-    def configure(self):
-        print("Writing Inventory!")
-        with open("ansible-setup/inventory/hosts.yaml", "w") as f:
-            f.write(self._writeInventory())
-        
+    def configure(self, writeInventory):
+        if writeInventory:
+            print("Writing Inventory!")
+            with open("ansible-setup/inventory/hosts.yaml", "w") as f:
+                f.write(self._writeInventory())
+            
         print("Writing Ansible variables!")
         self._writeVars()
 
 
-    def setup(self):
-        self.runCommand(["ansible-playbook", "topssim_setup.yaml", "-v"], cwd="ansible-setup")
+    def setup(self, tags):
+        command = ["ansible-playbook", "topssim_setup.yaml", "-v"]
+        if tags and len(tags) != 0:
+            command.append("--tags")
+            command.append(tags[0].replace(" ", ", "))
+        self.runCommand(command, cwd="ansible-setup")
         
 
     def _writeVars(self):
@@ -74,9 +79,19 @@ class AnsibleManager(CommandLineManager):
 
         This var makes it so that the hosts file is written at that address
         '''
-        if self.config["provider"].lower() == "vultr":
-            with open("ansible-setup/vars/vars.yaml", "w") as f:
-                f.write("etc_hosts: false")
+        with open("ansible-setup/roles/Open5GS Config/vars/main.yml", "w") as f:
+            if self.config["provider"].lower() == "vultr":
+                self.config["dest_hosts_path"] = "/etc/cloud/templates/hosts.debian.tmpl"
+            else:
+                self.config["dest_hosts_path"] = "/etc/hosts"
+            
+            f.write("dest_hosts_path: " + self.config["dest_hosts_path"])
+        
+        with open("ansible-setup/vars/vars.yaml", "w") as f:
+            f.write("---\n")
+            f.write("vplmn_test_command: "  + f'\"{self.config["vplmn_test_command"]}\"' + "\n")
+            f.write("hplmn_test_command: "  + f'\"{self.config["hplmn_test_command"]}\"' + "\n")
+
 
     def _writeInventory(self):
         newInv = INVENTORY.replace("HPLMN_PUBLIC_IP", self.config["hplmn_public_ip"])

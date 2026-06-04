@@ -15,6 +15,7 @@ It requires a .yaml config file to store the required parameters for execution. 
 ---
 
 ogs_repo: "<Open5GS repo>"
+ogs_version: main
 hplmn_config_repo: “<HPLMN Config repo>”
 vplmn_config_repo: “<VPLMN Config repo>”
 vplmn_hosts_path: “<Path to Hosts used in VPLMN>”
@@ -42,6 +43,10 @@ You can call it using:
 `python3 topssim_setup.py  -c /directory/your_config_file.yaml`
 
 You can check other command-line options with `python3 topssim_setup.py -h`.
+
+Some examples are:
+To run just the configuration and testing stages of Ansible on already existing machines:
+`python3 topssim_setup.py -c /home/agustin/5G_Setup/config.yaml -ansible --ansible_tags "config_stage testing_stage"`
 
 It is also useful to know that both OpenTofu and Ansible provide CLI tools. These can be used to isolate a part of the process. Some notable commands are:
 

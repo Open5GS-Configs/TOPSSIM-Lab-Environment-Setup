@@ -53,10 +53,8 @@ class setupTOPSSIM():
         # now the VMs have been created and the IPs to ssh into the machines are stored within config
         print("\n"+SEPARATOR+f"Start Ansible Configuration"+SEPARATOR+"\n\n")
 
-        # ansible-playbook release.yml --extra-vars "@some_file.yaml"
-        self.ansibleManager.configure()
-        print("\n"+SEPARATOR+f"Start Ansible Setup in VMs"+SEPARATOR+"\n\n")
-        self.ansibleManager.setup()
+        self.callAnsible()
+
 
 
     def destroy(self):
@@ -70,6 +68,12 @@ class setupTOPSSIM():
         strategy.destroy()
 
         return False
+
+
+    def callAnsible(self, writeInventory=True, tags=None):
+        self.ansibleManager.configure(writeInventory)
+        print("\n"+SEPARATOR+f"Start Ansible Setup in VMs"+SEPARATOR+"\n\n")
+        self.ansibleManager.setup(tags)
 
 
     def getVultrPlans(self, apiKey):
@@ -180,6 +184,10 @@ class setupTOPSSIM():
         if "services" not in configKeys:
             config["services"] = False
         
+        for plmn in ["hplmn", "vplmn"]:
+            if (plmn + "_test_command") not in configKeys:
+                self.config[plmn + "_test_command"] = ":"
+        
         return True
 
 
@@ -218,7 +226,8 @@ def main():
     # Actions
     parser.add_argument("-destroy", action='store_true', help="Destroys all of the current VMs")
     parser.add_argument("-restart", action='store_true', help="Destroys and restarts all of the current VMs")
-
+    parser.add_argument("-ansible", action='store_true', help="Calls Ansible to setup the VMs")
+    
     # These stop execution
     parser.add_argument("-VultrRegions", action='store_true', help="Shows the available regions for Vultr")
     parser.add_argument("-VultrPlans", action='store_true', help="Shows the available plans for Vultr")
@@ -233,7 +242,8 @@ def main():
     parser.add_argument("--hplmn_ip", help="The VPC ip of the home network")
     parser.add_argument("--vplmn_ip", help="The VPC ip of the visited network")
     parser.add_argument("--services", help="Creates service files for OGS components in /etc/system/systemd")
-    
+    parser.add_argument('--ansible_tags', nargs='+', help="Tells ansible which stages to run. Options: install_stage, config_stage, testing_stage")
+
     # Local Arguments
     parser.add_argument("--ram", help="The RAM used for the VMs (LOCAL ONLY)")
     parser.add_argument("--disk", help="The disk size allocated to the VMs (LOCAL ONLY)")
@@ -264,8 +274,11 @@ def main():
     if config["destroy"]:
         setup.destroy()
         return
-    if config["restart"]:
+    elif config["restart"]:
         setup.destroy()
+    elif config["ansible"]:
+        setup.callAnsible(writeInventory=False, tags=config["ansible_tags"])
+        return
     setup.setup()
 
 

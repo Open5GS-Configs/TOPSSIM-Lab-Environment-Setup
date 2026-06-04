@@ -62,17 +62,7 @@
 - name: Copy hosts file
   ansible.builtin.copy:
     src: /tmp/hosts-repo/hosts
-    dest: /etc/hosts
+    dest: "{{ dest_hosts_path }}"
     remote_src: true
     force: true
   become: yes
-  when: etc_hosts
-
-- name: Copy hosts file
-  ansible.builtin.copy:
-    src: /tmp/hosts-repo/hosts
-    dest: /etc/cloud/templates/hosts.debian.tmpl
-    remote_src: true
-    force: true
-  become: yes
-  when: not etc_hosts

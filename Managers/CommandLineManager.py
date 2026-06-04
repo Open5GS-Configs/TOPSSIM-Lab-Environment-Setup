@@ -7,10 +7,9 @@ SEPARATOR = ' '+'='*10+' '
 class CommandLineManager():
 
     def runCommand(self, command, input=None, noOutput=False, cwd=None):
-        if len(command) > 2:
-            commandName = f"{command[0]} {command[2]}"
-        else:
-            commandName = command[0]
+        commandName = ""
+        for c in command:
+            commandName += c + " "
         
         print("\n"+SEPARATOR+f"Running: {commandName}"+SEPARATOR+"\n\n")
         res = run(command, input=input, capture_output=noOutput, text=noOutput, cwd=cwd)

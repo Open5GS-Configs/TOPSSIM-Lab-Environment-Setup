@@ -16,6 +16,7 @@
     - Open5GS Setup
   vars:
     specific_mongodb_version: "8.0.23"
+    node_major: 20 # used for the installation of NodeJS
 
 - name: Configuration Stage
   hosts: all
@@ -28,11 +29,22 @@
   hosts: all
   tags: testing_stage
   vars_files:
-    - /vars/vars.yaml
-
+    - vars/vars.yaml
   tasks:
     - name: Test 5G core with builtin tests
       ansible.builtin.command: 
         cmd: ./build/tests/registration/registration -c /root/open5gs/build/configs/sample.yaml simple-test
         chdir: /root/open5gs
+
+    - name: Run HPLMN test command
+      ansible.builtin.shell: 
+        cmd: "{{ hplmn_test_command }}"
+        chdir: /root/open5gs
+      when: inventory_hostname in groups['hplmn']
+
+    - name: Run VPLMN test command
+      ansible.builtin.shell: 
+        cmd: "{{ vplmn_test_command }}"
+        chdir: /root/open5gs
+      when: inventory_hostname in groups['vplmn']
 
