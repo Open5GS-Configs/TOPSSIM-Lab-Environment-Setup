@@ -80,13 +80,20 @@ class AnsibleManager(CommandLineManager):
         This var makes it so that the hosts file is written at that address
         '''
         with open("ansible-setup/roles/Open5GS Config/vars/main.yml", "w") as f:
-            if self.config["provider"].lower() == "vultr":
-                self.config["dest_hosts_path"] = "/etc/cloud/templates/hosts.debian.tmpl"
-            else:
-                self.config["dest_hosts_path"] = "/etc/hosts"
-            
-            f.write("dest_hosts_path: " + self.config["dest_hosts_path"])
-        
+            with open("ansible-setup/roles/Netplan Config/vars/main.yml", "w") as g:
+                if self.config["provider"].lower() == "vultr":
+                    self.config["dest_hosts_path"] = "/etc/cloud/templates/hosts.debian.tmpl"
+                    self.config["dest_netplan_path"] = "/etc/netplan/50-cloud-init.yaml"
+
+                else:
+                    self.config["dest_hosts_path"] = "/etc/hosts"
+                    self.config["dest_netplan_path"] = "/etc/netplan/00-installer-config.yaml"
+                
+                f.write("dest_hosts_path: " + self.config["dest_hosts_path"])
+                
+                g.write("dest_netplan_path: "  + f'\"{self.config["dest_netplan_path"]}\"' + "\n")
+                g.write("vpc_v4_subnet_mask: "  + f'\"{self.config["vpc_v4_subnet_mask"]}\"' + "\n")
+
         with open("ansible-setup/vars/vars.yaml", "w") as f:
             f.write("---\n")
             f.write("vplmn_test_command: "  + f'\"{self.config["vplmn_test_command"]}\"' + "\n")

@@ -24,6 +24,9 @@
   roles:
     - Open5GS Config
     - Netplan Config
+  vars:
+    enp8s0_block: |
+      - "{{ private_ip }}/{{ vpc_v4_subnet_mask }}"
 
 - name: Testing Stage
   hosts: all

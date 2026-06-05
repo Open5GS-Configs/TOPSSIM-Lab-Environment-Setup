@@ -6,24 +6,28 @@
   become: yes
   args:
     creates: /sys/class/net/ogstun
+  tags: ['ogstun']
   
 - name: Add Ipv4 Address to TUN
   ansible.builtin.command: ip addr add 10.45.0.1/16 dev ogstun
   become: yes
   failed_when: false
   changed_when: false
+  tags: ['ogstun']
   
 - name: Add Ipv6 Address to TUN
   ansible.builtin.command: ip addr add 2001:db8:cafe::1/48 dev ogstun
   become: yes
   failed_when: false
   changed_when: false
+  tags: ['ogstun']
   
 - name: Enable ogstun Interface
   ansible.builtin.command: ip link set ogstun up
   become: yes
   failed_when: false
   changed_when: false
+  tags: ['ogstun']
   
 - name: Install Open5GS Dependencies
   ansible.builtin.apt:
@@ -53,6 +57,7 @@
       - meson
     state: present
     update_cache: yes
+  tags: ['install_ogs']
 
 - name: Install libidn depending on the system
   ansible.builtin.apt:
@@ -66,11 +71,13 @@
   register: apt_result
   ignore_errors: true
   when: apt_result is not defined or apt_result.failed
+  tags: ['install_ogs']
 
 - name: Delete ogs dir if it exists
   ansible.builtin.file:
     path: /root/open5gs
     state: absent
+  tags: ['install_ogs']
 
 - name: Clone OGS Repo
   ansible.builtin.git: 
@@ -78,27 +85,31 @@
     dest: /root/open5gs
     single_branch: yes
     version: "{{ ogs_version }}"
+  tags: ['install_ogs']
 
 - name: Meson Build Open5GS
   ansible.builtin.command: 
     cmd: meson build --prefix=/root/open5gs/install
     chdir: /root/open5gs
+  tags: ['install_ogs']
 
 - name: Build Open5GS with Ninja
   shell: ninja -C build 
   args:
     chdir: /root/open5gs
   register: build_result   
-  failed_when: build_result.rc != 0          
+  failed_when: build_result.rc != 0        
+  tags: ['install_ogs']  
 
 - name: Ninja Install Open5GS
   ansible.builtin.command: 
     cmd: ninja install
     chdir: /root/open5gs/build
+  tags: ['install_ogs']
 
 
 #- name: Install NodeJs prerequisites
-#  apt:
+#  ansible.builtin.apt:
 #    name:
 #      - ca-certificates
 #      - curl
@@ -107,24 +118,24 @@
 #    update_cache: true
 #
 #- name: Create keyrings directory
-#  file:
+#  ansible.builtin.file:
 #    path: /etc/apt/keyrings
 #    state: directory
 #    mode: '0755'
 #
 #- name: Download GPG key
-#  shell: curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg -y
+#  ansible.builtin.shell: curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg -y
 #  args:
 #    creates: /etc/apt/keyrings/nodesource.gp
 #
 #- name: Add NodeSource repository
-#  apt_repository:
+#  ansible.builtin.apt_repository:
 #    repo: "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_{{ node_major }}.x nodistro main"
 #    state: present
 #    filename: nodesource
 #
 #- name: Install Node.js
-#  apt:
+#  ansible.builtin.apt:
 #    name: nodejs
 #    state: present
 #    update_cache: true
