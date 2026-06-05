@@ -67,6 +67,15 @@
     force: true
   become: yes
 
+- name: Copy hosts file to template
+  ansible.builtin.copy:
+    src: /tmp/hosts-repo/hosts
+    dest: "/etc/cloud/templates/hosts.debian.tmpl"
+    remote_src: true
+    force: true
+  become: yes
+  when: provider == "vultr"
+
 - name: Disable cloud-init hosts management
   ansible.builtin.lineinfile:
     path: /etc/cloud/cloud.cfg
@@ -78,3 +87,15 @@
   ansible.builtin.script: files/correctLogPath.py
   args:
     executable: python3
+
+- name: Modify ufw rules (INPUT)
+  ansible.builtin.command:
+    cmd: ufw allow in on enp8s0
+  become: yes
+  when: provider == "vultr"
+
+- name: Modify ufw rules (OUTPUT)
+  ansible.builtin.command:
+    cmd: ufw allow out on enp8s0
+  become: yes
+  when: provider == "vultr"

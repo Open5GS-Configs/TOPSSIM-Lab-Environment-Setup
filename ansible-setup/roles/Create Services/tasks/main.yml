@@ -5,6 +5,30 @@
     src: files/
     dest: /etc/systemd/system
 
+- name: Copy HPLMN SEPP service file
+  ansible.builtin.copy:
+    src: /etc/systemd/system/hplmn/open5gs-seppd.service
+    dest: /etc/systemd/system
+    remote_src: true
+  when: inventory_hostname in groups['hplmn']
+
+- name: Copy VPLMN SEPP service file
+  ansible.builtin.copy:
+    src: /etc/systemd/system/vplmn/open5gs-seppd.service
+    dest: /etc/systemd/system
+    remote_src: true
+  when: inventory_hostname in groups['vplmn']
+
+- name: Remove unnecessary folder (HPLMN)
+  ansible.builtin.file:
+    path: /etc/systemd/system/hplmn/
+    state: absent
+
+- name: Remove unnecessary folder (VPLMN)
+  ansible.builtin.file:
+    path: /etc/systemd/system/vplmn/
+    state: absent
+
 - name: Force systemd to reread configs 
   ansible.builtin.systemd_service:
     daemon_reload: true

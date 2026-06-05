@@ -2,6 +2,7 @@ from json import loads
 from pathlib import Path
 from subprocess import run
 from os import getenv
+from time import time
 
 import argparse 
 import yaml
@@ -55,6 +56,7 @@ class setupTOPSSIM():
 
         self.callAnsible()
 
+        print(f'\n\nThe public IPs of the VMs are:\n - HPLMN: {self.config["hplmn_public_ip"]}\n - VPLMN: {self.config["vplmn_public_ip"]}')
 
 
     def destroy(self):
@@ -80,7 +82,7 @@ class setupTOPSSIM():
         availVultrPlans = requests.get("https://api.vultr.com/v2/plans", headers={"Authorization": f"Bearer {apiKey}"})
 
         if availVultrPlans.status_code != 200:
-            raise Exception("Error retrieving Vultr plans. Check internet connection or API key.")
+            raise Exception(f"Error retrieving Vultr plans. Check internet connection or API key. [Status Code: {availVultrPlans.status_code}]")
         
         jsonVultrPlans = loads(str(availVultrPlans.content)[2:-1])['plans']
         return jsonVultrPlans
@@ -90,7 +92,7 @@ class setupTOPSSIM():
         availVultrRegions = requests.get("https://api.vultr.com/v2/regions", headers={"Authorization": f"Bearer {apiKey}"})    
         
         if availVultrRegions.status_code != 200:
-            raise Exception("Error retrieving Vultr regions. Check internet connection or API key.")
+            raise Exception(f"Error retrieving Vultr plans. Check internet connection or API key. [Status Code: {availVultrPlans.status_code}]")
         
         jsonVultrRegions = loads(str(availVultrRegions.content)[2:-1])['regions']
         return jsonVultrRegions
@@ -125,11 +127,13 @@ class setupTOPSSIM():
                 if p not in configKeys:
                     self._raiseMissingConfig(p)
             
+            print("Checking Vultr plan availability")
             availPlans = self.getVultrPlans(self.config['vultr_api_key'])
             idAvailPlans = [plan['id'] for plan in availPlans]
             if self.config["vultr_plan_id"] not in idAvailPlans:
                 self._raiseWrongConfig("vultr_plan_id")
 
+            print("Checking Vultr region availability")
             availRegions = self.getVultrRegions(self.config['vultr_api_key'])
             idAvailRegions = [region['id'] for region in availRegions]
             for region in [self.config["h_region"], self.config["v_region"]]:
@@ -220,6 +224,8 @@ class setupTOPSSIM():
 
 
 def main():    
+    start_time = time()
+
     parser = argparse.ArgumentParser(description="Open5Gs testing environment \
                                                 setup for the TOPSSIM project")
 
@@ -242,7 +248,7 @@ def main():
     parser.add_argument("--hplmn_ip", help="The VPC ip of the home network")
     parser.add_argument("--vplmn_ip", help="The VPC ip of the visited network")
     parser.add_argument("--services", help="Creates service files for OGS components in /etc/system/systemd")
-    parser.add_argument('--ansible_tags', nargs='+', help="Tells ansible which stages to run. Options: install_stage, config_stage, testing_stage, services_stage, ogstun, ")
+    parser.add_argument('--ansible_tags', nargs='+', help="Tells ansible which stages to run. Options: install_stage, config_stage, testing_stage, services_stage, ogstun, install_ogs")
 
     # Local Arguments
     parser.add_argument("--ram", help="The RAM used for the VMs (LOCAL ONLY)")
@@ -280,6 +286,8 @@ def main():
         setup.callAnsible(writeInventory=False, tags=config["ansible_tags"])
         return
     setup.setup()
+
+    print(f"\n\nExecution Complete!\nTime Elapsed: {(time()-start_time):.2f} seconds")
 
 
 def parseConfig(configFile):
