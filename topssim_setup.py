@@ -114,24 +114,31 @@ class setupTOPSSIM(CommandLineManager):
             print(f'\n\nYour VMs are available through localhost with ports:\n - HPLMN: {self.config["hplmn"]["port"]}\n - VPLMN: {self.config["vplmn"]["port"]}')
 
 
+    def printVultrRegions(self):
+        regions = self.getVultrRegions(self.config['vultr']['api_key'])
+        [print(f"City: {region['city']}, ID: {region['id']}\n") for region in regions]
+
+
+    def printVultrPlans(self):
+        plans = self.getVultrPlans(self.config['vultr']['api_key'])
+        [print(f"ID: {plan['id']}\n") for plan in plans]
+
+
+    def printReadme(self):
+        with open((self.cwd / "README.md"), "r") as f:
+            print(f.read())
+
+
     def _checkConfigurationValid(self):
         configKeys = self.config.keys()
-
-        if "VultrRegions" in configKeys:
-            regions = self.getVultrRegions(self.config['vultr']['api_key'])
-            [print(f"City: {region['city']}, ID: {region['id']}\n") for region in regions]
-            return False
-            
-        if "VultrPlans" in configKeys:
-            plans = self.getVultrPlans(self.config['vultr']['api_key'])
-            [print(f"ID: {plan['id']}\n") for plan in plans]
-            return False
-            
-        if "readme" in configKeys:
-            with open("README.md", "r") as f:
-                print(f.read())
-            return False
         
+        if "vultr_regions" in configKeys or "vultr_plans" in configKeys:
+            self.config["vultr"] = {}
+            self.config["vultr"]["api_key"] = getenv("VULTR_API_KEY")
+            return False
+        elif "readme" in configKeys:
+            return False
+
         self.consoleRule("Asserting necessary parameters")
         if self.config["provider"].lower() in CLOUD_PROVIDERS:
             print("\nCloud provider Recognized!")

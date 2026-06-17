@@ -60,6 +60,15 @@ def main():
     elif "ssh" in configKeys:
         setup.printVMIPs()
     
+    elif "vultr_regions" in configKeys:
+        setup.printVultrRegions()
+
+    elif "vultr_plans" in configKeys:
+        setup.printVultrPlans()
+
+    elif "readme" in configKeys:
+        setup.printReadme()
+    
     else:
         setup.setup()
 

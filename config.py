@@ -39,7 +39,7 @@ class Config(CommandLineManager):
 
         config = self.apply_cli_overrides(config, self.args)
 
-        for flag in ("destroy", "restart", "ansible", "VultrRegions", "VultrPlans", "readme", "test", "up", "ssh", "ad_hoc", "log"):
+        for flag in ("destroy", "restart", "ansible", "vultr_regions", "vultr_plans", "readme", "test", "up", "ssh", "ad_hoc", "log"):
             if hasattr(self.args, flag):
                 config[flag] = getattr(self.args, flag)
 
@@ -134,8 +134,8 @@ class Config(CommandLineManager):
         self.parser.add_argument("-log", action='store_true', help="Uses Ansible ad-hoc commands to tail the logs of a OGS component")
 
         # Printing (these stop execution)
-        self.parser.add_argument("-VultrRegions", action='store_true', help="Shows the available regions for Vultr")
-        self.parser.add_argument("-VultrPlans", action='store_true', help="Shows the available plans for Vultr")
+        self.parser.add_argument("-vultr_regions", action='store_true', help="Shows the available regions for Vultr")
+        self.parser.add_argument("-vultr_plans", action='store_true', help="Shows the available plans for Vultr")
         self.parser.add_argument("-readme", action='store_true', help="Prints the README")
         
         # General Arguments
