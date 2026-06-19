@@ -13,4 +13,6 @@ netem:
     cellsize: 100
     packetoverheard: 20
     rate: 5kbit
-provider: VB
+
+use_netem: true
+provider: vb

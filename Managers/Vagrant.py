@@ -61,7 +61,7 @@ class Vagrant(InfrastructureManager, CommandLineManager):
 
 
     def callInfManager(self):
-        self.populateVars()
+        self._populateVars()
         
         if self.runCommand(["vagrant", "up"], cwd="vagrant-config").returncode != 0:
             raise Exception("Error applying Vagrant plan") 
@@ -119,7 +119,7 @@ class Vagrant(InfrastructureManager, CommandLineManager):
             raise Exception("Error destroying Vagrant VMs: " + res.stderr)
 
 
-    def readIPs(self, res):
+    def readIPs(self):
         res = self.runCommand(["vagrant", "ssh-config", "--machine-readable"], noOutput=True, cwd="vagrant-config")
         if res.returncode != 0:
             raise Exception("Error collecting VM IPs")

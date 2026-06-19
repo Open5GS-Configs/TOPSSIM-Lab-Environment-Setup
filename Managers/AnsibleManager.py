@@ -93,7 +93,7 @@ class AnsibleManager(CommandLineManager):
 
     def setup(self, tags):
         try:
-            command = ["ansible-playbook", "topssim_setup.yaml", "-vv"]
+            command = ["ansible-playbook", "topssim_setup.yaml", "-v"]
             if tags and len(tags) != 0:
                 command.append("--tags")
                 command.append(tags[0].replace(" ", ", "))
@@ -222,11 +222,12 @@ class AnsibleManager(CommandLineManager):
                     if "use_netem" in self.config["vagrant"].keys() and self.config["vagrant"]["use_netem"]:
                         netemConfig = {"netem": self.config["vagrant"]["netem"]}
                         f.write(dump(netemConfig))
-                        f.write("use_netem: true")
+                        f.write("\n")
+                        f.write("use_netem: true\n")
                     else:
-                        f.write("use_netem: false")
+                        f.write("use_netem: false\n")
 
-                f.write("provider: " + self.config["provider"])
+                f.write("provider: " + self.config["provider"] + "\n")
                 
                 g.write("dest_netplan_path: "  + f'\"{self.config["dest_netplan_path"]}\"' + "\n")
                 

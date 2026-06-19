@@ -173,7 +173,6 @@ class Config(CommandLineManager):
         self.parser.add_argument("--a", help='A string of arguments for the ad-hoc command (e.g. "ip a")')
         self.parser.add_argument("--B", default=-1, help='Timeout (in seconds) for ad-hoc command')
         self.parser.add_argument("--P", default=-1, help='Poll time for ad-hoc commands')
-        self.parser.add_argument("--v", default=-1, help='Poll time for ad-hoc commands')
 
         # Logs
         self.parser.add_argument("--func", nargs='+', help="Which function logs are going to be printed for (can be a list separated by spaces)")

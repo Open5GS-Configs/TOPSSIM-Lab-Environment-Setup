@@ -140,7 +140,8 @@ class setupTOPSSIM(CommandLineManager):
             return False
 
         self.consoleRule("Asserting necessary parameters")
-        if self.config["provider"].lower() in CLOUD_PROVIDERS:
+        self.config["provider"] = self.config["provider"].lower()
+        if self.config["provider"] in CLOUD_PROVIDERS:
             print("\nCloud provider Recognized!")
             self.config["location"] = "cloud"
 
@@ -187,7 +188,7 @@ class setupTOPSSIM(CommandLineManager):
             
             self.strategy = OpenTofu(self.config, self.cwd)
 
-        elif self.config["provider"].lower() in LOCAL_PROVIDERS:
+        elif self.config["provider"] in LOCAL_PROVIDERS:
             print("\nLocal provider Recognized!")
             self.config["location"] = "local"
 

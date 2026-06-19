@@ -37,7 +37,7 @@ def main():
             config["ansible_tags"].remove("testing_stage")
             config["ansible_tags"].append("ssh_stage")
         setup.callAnsible(writeInventory=False, tags=config["ansible_tags"])
-        if runTest:
+        if runTest or config["ansible_tags"] == "":
             setup.ansibleManager.runFileCommands()
         setup.printVMIPs()    
 
