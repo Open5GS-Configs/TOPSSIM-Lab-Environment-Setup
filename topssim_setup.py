@@ -60,6 +60,10 @@ class setupTOPSSIM(CommandLineManager):
         # now the VMs have been created and the IPs to ssh into the machines are stored within config
         self.consoleRule("Start Ansible Configuration")
         self.callAnsible()
+
+        self.ConsoleRule("Run File Execution")
+        self.ansibleManager.runFileCommands()
+        
         self.printVMIPs
 
 

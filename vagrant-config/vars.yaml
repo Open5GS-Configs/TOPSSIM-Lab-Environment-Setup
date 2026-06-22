@@ -5,6 +5,7 @@ box:
     ansible_tags: 
     ansible_ssh_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICfy//mrfB0li+kQoLhKHaE9MUwJTQXURLzj/ctTpj6I aeeguiguren@segrecedt097
     user_ssh_key: ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILtDJ010ycSBEjoVu8XP2ob/z20TCd5xqsIUpNaielao root@DESKTOP-6QUR9Q3
+    provider: vmware
 
 hplmn:
     private_ip: 10.10.0.3
@@ -15,7 +16,7 @@ hplmn:
   
     use_hosts_path: True
   
-    hosts_path: /home/aeeguiguren/Documents/hosts/hplmn/hosts
+    hosts_path: /home/aeeguiguren/Documents//hosts/hplmn/hosts
   
   
 
