@@ -113,11 +113,6 @@ class OpenTofu(InfrastructureManager, CommandLineManager):
                     vpcs = ""
                     for j in range(vpcNum):
                         if box in self.config["peering"][j]["members"]:
-                            if "interface_number" not in self.config["boxes"][box]: self.config["boxes"][box]["interface_number"] = 8
-                            
-                            self.config["boxes"][box]["private_ip"][self.config["peering"][j]["name"]]["interface"] = f'enp{self.config["boxes"][box]["interface_number"]}s0'
-                            self.config["boxes"][box]["interface_number"] += 1
-                            
                             vpcs += f'\"{self.config["peering"][j]["name"]}\",'
                     
                     instance += self.boxTemplate.render(

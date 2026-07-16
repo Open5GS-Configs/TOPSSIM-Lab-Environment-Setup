@@ -36,6 +36,7 @@ HOST = """    {{ name }}:
 GROUP_VARS = """interface_num: {{ interface_num }}
 private_ip: 
 {{ private_ip }}
+mongodb: {{ mongodb }}
 ogs: {{ ogs }}
 {% if ogs %}
 ogs_repo: {{ ogs_repo }}
@@ -127,7 +128,6 @@ class AnsibleManager(CommandLineManager):
 
     def setup(self, tags):
         try:
-            print(self.config)
             command = ["ansible-playbook", "topssim_setup.yaml"]
 
             #if self.config["verbose"]: command.append("-v")
@@ -146,20 +146,32 @@ class AnsibleManager(CommandLineManager):
         - logs
         - output
         - pcap
+        - timings
         """
         now = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         if len(self.run) > 0: 
-            timingPath = self.cwd / "results" / "timing" / now
+            resultsPath = self.cwd / "results" / f"results-{now}" 
+            timingPath = resultsPath / "timing"
+            resultsPath.mkdir()
             timingPath.mkdir()
         else:
             return
 
-        if self.config["capture_packets"]: self.runAdHocCommand("all",
+        if self.config["capture_packets"]: 
+            pcapWhere = ""
+            if "pcap" not in self.run:
+                pcapWhere = "all"
+            else:
+                for box in self.run["pcap"]:
+                    pcapWhere += box + ", "
+                pcapWhere = pcapWhere[:-2]
+            
+            self.runAdHocCommand(pcapWhere,
                                              "ansible.builtin.shell", 
                                             r"rm -f /tmp/capture.pcap & \
                                             setsid tcpdump -i any -w /tmp/capture.pcap -U >/dev/null 2>&1 & \
                                             echo $! >/tmp/tcpdump.pid", 
-                                            "Start testing packet capture", become=True)
+                                            "Start testing packet capture", capture_output=True, text=True, become=True)
         
         timing = []
         maxRepeats = 1
@@ -195,8 +207,8 @@ class AnsibleManager(CommandLineManager):
             repeatRun = ("repeats" in cmdKeys)
             if repeatRun: 
                 repeats = cmd["repeats"]
-                output_dir = self.cwd / "results" / "output" / now
-                output_dir.mkdir(parents=True, exist_ok=True)
+                output_dir = resultsPath / "output"
+                if self.config["write_test_output"]: output_dir.mkdir(parents=True, exist_ok=True)
             else: 
                 repeats = 1
             
@@ -261,44 +273,59 @@ class AnsibleManager(CommandLineManager):
             writer.writerows(timing)
 
         if self.config["capture_packets"]: 
-            pcap_dir = self.cwd / "results" / "pcap" / now
+            pcap_dir = resultsPath / "pcap" 
             pcap_dir.mkdir(parents=True, exist_ok=True)
             
             self.runAdHocCommand("all", 
                             "ansible.builtin.shell", 
                             r"kill -2 $(cat /tmp/tcpdump.pid) && sleep 2 && rm -f /tmp/tcpdump.pid", 
-                            "Kill tcpdump process")
+                            "Kill tcpdump process", capture_output=True, text=True)
 
             self.runAdHocCommand("all", 
                             "ansible.builtin.fetch", 
                             str(f"src=/tmp/capture.pcap dest={pcap_dir}/{{{{ inventory_hostname }}}}_capture.pcap flat=yes"), 
-                            "Fetch captured packets (.pcap)")
+                            "Fetch captured packets (.pcap)", capture_output=True, text=True)
 
         if self.config["copy_logs"]:
-            logs_dir = self.cwd / "results" / "logs" / now
+            logs_dir = resultsPath / "logs" 
             logs_dir.mkdir(parents=True, exist_ok=True)
 
-            res = self.runAdHocCommand("all", "ansible.builtin.shell", "find /root/open5gs/install/var/log/open5gs -maxdepth 1 -type f", "", capture_output=True, text=True)
+            logsWhere = ""
+            for box in self.config["ogs_boxes"]:
+                logsWhere += box + ", "
+            logsWhere = logsWhere[:-2]
+
+            res = self.runAdHocCommand(logsWhere, 
+                                "ansible.builtin.shell", 
+                                "find /root/open5gs/install/var/log/open5gs -maxdepth 1 -type f", 
+                                "", 
+                                capture_output=True, 
+                                text=True)
+
             stdout = res.stdout.split("\n")
             if "Using" in stdout[0]:
                 stdout = stdout[1:]
             
+            self.consoleRule("Copying Open5GS Logs after testing")
             box = ""
             for i in range(len(stdout)):
                 if ">>" in stdout[i]:
                     box = stdout[i].split(" | ")[0]
+                    self.consolePrint(f"Copying the logs from {box.upper()}")
                 # ignore non-log files
                 elif "log" not in stdout[i]:
                     continue
                 else:
-                    self.fetchLogs(stdout[i].split("/")[-1].split(".")[0], logs_dir, box)
+                    func = stdout[i].split("/")[-1].split(".")[0]
+                    self.consolePrint(f"Copying {func} logs...")
+                    self.fetchLogs(func, logs_dir, box)
             
 
     def fetchLogs(self, func, logs_dir, where="all"):
         name=f"\nCopying [dark_orange italic]{func.upper()}[/] logs\n"
-        dest = logs_dir / f"logs/{{{{ inventory_hostname }}}}/{func}.log"
-        command=f"src=/root/open5gs/install/var/log/open5gs/{func}.log dest={dest}"
-        self.runAdHocCommand(where, "ansible.builtin.fetch", command, name)
+        dest = logs_dir / f"{{{{ inventory_hostname }}}}/{func}.log"
+        command=f"src=/root/open5gs/install/var/log/open5gs/{func}.log dest={dest} flat=yes"
+        self.runAdHocCommand(where, "ansible.builtin.fetch", command, name, capture_output=True, text=True, ruleAndResult=False)
 
 
     def getLogs(self, where, components, lines=10):
@@ -315,7 +342,7 @@ class AnsibleManager(CommandLineManager):
             self.runAdHocCommand(where, "ansible.builtin.shell", command, name, titleJustify="left")
 
 
-    def runAdHocCommand(self, where, module, cmd, name, B=None, P=None, cwd=None, titleJustify="center", capture_output=False, text=False, become=False):
+    def runAdHocCommand(self, where, module, cmd, name, B=None, P=None, cwd=None, titleJustify="center", capture_output=False, text=False, become=False, ruleAndResult=True):
         command = ["ansible", where, "-m", module, "-a", cmd]
         if B and B != -1:
             command.append("-B")
@@ -328,7 +355,7 @@ class AnsibleManager(CommandLineManager):
         if become:
             command.append("-b")
         #if self.config["verbose"]: command.append("-v")
-        return self.runCommand(command, cwd=cwd, name=name, titleJustify=titleJustify, capture_output=capture_output, text=text)
+        return self.runCommand(command, cwd=cwd, name=name, titleJustify=titleJustify, capture_output=capture_output, text=text, ruleAndResult=ruleAndResult)
 
 
     def _writeVars(self):
@@ -336,15 +363,18 @@ class AnsibleManager(CommandLineManager):
         netemConfig = ""
         for box in self.config["boxes"]:
             with open(self.cwd / "ansible-setup" / "inventory" / "group_vars" / f"{box}.yaml", "w") as f:
+                for network in self.config["boxes"][box]["private_ip"]:
+                    for i in range(len(self.config["peering"])):
+                        if network == self.config["peering"][i]["name"]:
+                            self.config["boxes"][box]["private_ip"][network]["subnet_mask"] = self.config["peering"][i]["v4_subnet_mask"]
+                            break
                 privateIP = dump(self.config["boxes"][box]["private_ip"])
-                print(privateIP)
-                privateIP = "\t" + privateIP
+
+                privateIP = "  " + privateIP
                 for i in range(len(privateIP)):
                     if privateIP[i] == "\n":
-                        print(privateIP[:i+1])
-                        privateIP = privateIP[:i+1] + "\t" + privateIP[i-1:]
-                
-                print(privateIP)
+                        privateIP = privateIP[:i+1] + "  " + privateIP[i+1:]
+
                 ogs = True
                 if box not in self.config["ogs_boxes"]: 
                     ogs = False
@@ -373,6 +403,7 @@ class AnsibleManager(CommandLineManager):
                 groupvars = self.groupvarsTemplate.render(
                     interface_num=len(self.config["boxes"][box]['private_ip']),
                     private_ip=privateIP,
+                    mongodb=self.config["boxes"][box]["mongodb"],
                     ogs=ogs,
                     ogs_repo=self.config["boxes"][box]["ogs"]["repo"],
                     ogs_version=self.config["boxes"][box]["ogs"]["version"],
@@ -401,11 +432,6 @@ class AnsibleManager(CommandLineManager):
         # a.) make changes to the master file in /etc/cloud/templates/hosts.debian.tmpl
         This var makes it so that the hosts file is written at that address
         '''
-        with open(self.cwd / "ansible-setup" / "roles" / "Network Config" / "vars" / "main.yml", "w") as g:
-            self.config["dest_netplan_path"] = "/etc/netplan/50-vagrant.yaml"
-            if self.config["provider"].lower() == "vultr":
-                self.config["dest_netplan_path"] = "/etc/netplan/50-cloud-init.yaml"
-            g.write("dest_netplan_path: "  + f'\"{self.config["dest_netplan_path"]}\"' + "\n")
                 
         if "create_services" not in self.config.keys():
             self.config["create_services"] = "true"

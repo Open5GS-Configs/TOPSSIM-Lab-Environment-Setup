@@ -51,7 +51,7 @@ class setupTOPSSIM(CommandLineManager):
         self.ansibleManager = AnsibleManager(self.config, self.run, self.cwd)
 
 
-    def setup(self):
+    def setup(self, runTest=False):
         if self.strategy == None or self.ansibleManager == None: return
 
         self.consoleRule(f"Calling {self.strategy.__class__.__name__}")
@@ -61,7 +61,7 @@ class setupTOPSSIM(CommandLineManager):
         self.consoleRule("Start Ansible Configuration")
         self.callAnsible(self.config["ansible_tags"])
 
-        if "ansible_tags" not in self.config.keys() or "testing_stage" in self.config["ansible_tags"]:
+        if runTest or "ansible_tags" not in self.config.keys() or "testing_stage" in self.config["ansible_tags"]:
             self.consoleRule("Run File Execution")
             self.ansibleManager.runFileCommands()
         
@@ -233,6 +233,13 @@ class setupTOPSSIM(CommandLineManager):
 
             boxKeys = self.config["boxes"][box].keys()
             
+            for i in range(len(self.config["peering"])):
+                if box in self.config["peering"][i]["members"]:
+                    if "interface_number" not in self.config["boxes"][box]: self.config["boxes"][box]["interface_number"] = 8        
+                    self.config["boxes"][box]["private_ip"][self.config["peering"][i]["name"]]["interface"] = f'enp{self.config["boxes"][box]["interface_number"]}s0'
+                    self.config["boxes"][box]["interface_number"] += 1
+
+
             for c in [["config_path", "config_repo"], ["hosts_path", "hosts_repo"]]:
                 configPresent = False
 
@@ -257,6 +264,9 @@ class setupTOPSSIM(CommandLineManager):
                 self.config["boxes"][box]["ogs"]["version"] = DEFAULT_BRANCH
             elif self.config["boxes"][box]["ogs"]["version"] == None:
                 self.config["boxes"][box]["ogs"]["version"] = DEFAULT_BRANCH
+
+            if "mongodb" not in self.config["boxes"][box]:
+                self.config["boxes"][box]["mongodb"] = False
 
         if "create_services" not in configKeys:
             self.config["create_services"] = False

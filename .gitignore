@@ -231,12 +231,7 @@ config_vultr.yaml
 vagrant-config/.vagrant
 config_vultr.yaml
 .vagrant
-ansible-setup/inventory/hosts.yaml
-ansible-setup/inventory/hosts.yaml
 logs.txt
-results/output/*
-results/pcap/*
-results/timing/*
-results/logs/*
-ansible-setup/inventory/hosts.yaml
+results/*
 ansible-setup/vars/vars.yaml
+5G_Setup/ansible-setup/inventory/*

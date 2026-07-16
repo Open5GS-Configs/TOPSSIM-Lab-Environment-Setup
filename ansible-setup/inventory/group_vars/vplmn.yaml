@@ -1,42 +1,15 @@
 interface_num: 2
 private_ip: 
-	sepp_link:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-	:
-  interface: enp8s0
-  ip: 10.10.0.4
-topssim_vplmn:
-  interface: enp9s0
-  ip: 10.30.0.6
+  sepp_link:
+    interface: enp8s0
+    ip: 10.10.0.4
+    subnet_mask: '28'
+  topssim_vplmn:
+    interface: enp9s0
+    ip: 10.30.0.6
+    subnet_mask: '28'
 
+mongodb: False
 ogs: True
 
 ogs_repo: https://github.com/open5gs/open5gs

@@ -1,24 +1,38 @@
 ---
-# tasks file for Netplan Config
+#- name: Remove hardcoded address line
+#  ansible.builtin.replace:
+#    path: "{{ dest_netplan_path }}"
+#    regexp: '^\s+- "[\d\.]+/[\d]+"$'
+#    replace: ''
+#  when: provider == "vultr" 
 
-# set static ips for sepp link
-# netplan apply
-# test connection?
+- name: Remove cloud-init file
+  ansible.builtin.file:
+    path: /etc/netplan/50-cloud-init.yaml
+    state: absent
 
-- name: Remove hardcoded address line
-  ansible.builtin.replace:
-    path: "{{ dest_netplan_path }}"
-    regexp: '^\s+- "[\d\.]+/[\d]+"$'
-    replace: ''
-  when: provider == "vultr" 
+- name: Copy file to disable cloud-init
+  ansible.builtin.copy:
+    src: files/99-disable-network-config.cfg
+    dest: /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+    owner: root
+    mode: '0644'
 
-- name: Set static ips for sepp link 
-  ansible.builtin.blockinfile:
-    path: "{{ dest_netplan_path }}"
-    marker: "# {mark} ANSIBLE MANAGED BLOCK - enp8s0"
-    insertafter: '      addresses:'
-    block: "{{ enp8s0_block | indent(6, first=true) }}"
-  when: provider == "vultr" 
+- name: Template netplan config
+  ansible.builtin.template:
+    src: templates/90-netplanconfig.j2
+    dest: /etc/netplan/90-netplanconfig.yaml
+    owner: root
+    mode: '0640'
+
+#- name: Set static ips for sepp link 
+#  ansible.builtin.blockinfile:
+#    path: "{{ dest_netplan_path }}"
+#    marker: "# {mark} ANSIBLE MANAGED BLOCK - {{ item.value.interface }}"
+#    insertafter: '      addresses:'
+#    block: "{{ item.value.ip }}/{{ item.value.subnet_mask }}"
+#  when: provider == "vultr" 
+#  loop: "{{ private_ip | dict2items }}"
 
 - name: Apply Netplan Config
   ansible.builtin.command:
