@@ -19,10 +19,9 @@ CLOUD_PROVIDERS = ["vultr"]
 LOCAL_PROVIDERS = ["vb", "vmware"]
 
 COMMON_REQUIRED_PARAMETERS = ["provider"]
-LOCAL_REQUIRED_PARAMETERS = ["vagrant"]
 VAGRANT_REQUIRED_PARAMETERS = ["ram", "disk", "cpu"]
 VULTR_CLOUD_REQUIRED_PARAMETERS = []
-VPC_CLOUD_REQUIRED_PARAMETERS = ["region"]
+VPC_CLOUD_REQUIRED_PARAMETERS = []
 
 SEPARATOR = ' '+'='*10+' '
 DEFAULT_BRANCH = "main"
@@ -212,13 +211,10 @@ class setupTOPSSIM(CommandLineManager):
             print("\nLocal provider Recognized!")
             self.config["location"] = "local"
 
-            for p in LOCAL_REQUIRED_PARAMETERS:
-                if p not in configKeys:
-                    self._raiseMissingConfig(p)
-            
-            for p in VAGRANT_REQUIRED_PARAMETERS:
-                if p not in self.config["vagrant"].keys():
-                    self._raiseMissingConfig(p)
+            for box in self.config["boxes"]:
+                for p in VAGRANT_REQUIRED_PARAMETERS:
+                    if p not in self.config["boxes"][box]["vagrant"]:
+                        self._raiseMissingConfig(p)
 
             self.strategy = Vagrant(self.config, self.cwd)
         

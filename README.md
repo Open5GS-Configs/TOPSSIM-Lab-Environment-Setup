@@ -249,6 +249,7 @@ And add private key:
 - If a resource has been deleted manually, OpenTofu will not recognize the change. It must be manually deleted from its instances.     
 This shows the states that are being tracked: `tofu state list`      
 If the instance deleted is still there, you can remove it with: `tofu state rm vultr_vpc.sepp-link` (instead of `vultr_vpc.sepp-link` insert your instance's address).     
+- If an error saying that you haved reached the maximum number of instances appears when trying to create new VMs (during a fresh start or a restart), try running the command again.
 
 2. Vagrant
 If a machine times out during boot, especially when being created, it can signify a problem in the communication to that machine. Sometimes the box has been created but it does not connect. The best way to deal with this is to run the -restart command, which destroys and recreates the machines. 
