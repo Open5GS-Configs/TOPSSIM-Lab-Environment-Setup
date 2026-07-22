@@ -166,7 +166,7 @@ A yaml file that gives commands to be executed in each machine. It is executed s
   script: <path to testing script>
 
 # logs to be captured when running in TUI mode
-- logs:
+- tui:
     - where: vplmn
       func: amf
     - where: vplmn
