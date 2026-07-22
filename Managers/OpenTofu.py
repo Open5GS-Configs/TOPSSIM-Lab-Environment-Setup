@@ -8,24 +8,29 @@ from .CommandLineManager import CommandLineManager
 
 VARS_PATH = "vultr-opentofu/terraform.tfvars"
 
-VARS = """vpc_v4_subnet_mask = "{{ vpc_v4_subnet_mask }}"
-vpc_v4_subnet = "{{ vpc_v4_subnet }}"
-vpc_region = "{{ vpc_v4_subnet_region }}"
-vultr_api_key = "{{ vultr_api_key }}"
-vultr_plan_id = "{{ vultr_plan_id }}"
+VARS = """vultr_api_key = "{{ vultr_api_key }}"
 user_ssh_key = "{{ user_ssh_key }}"
 ansible_ssh_key = "{{ ansible_ssh_key }}"
 boxes = {
 {{ boxes }}
 }
-descriptions = { 
-    {{ descriptions }} 
+peerings = { 
+{{ peerings }} 
 }
+"""
+
+PEERING = """   {{ name }} = {
+        "description": {{ description }}
+		"region": "{{ region }}",
+		"v4_subnet": "{{ v4_subnet }}",
+        "v4_subnet_mask": "{{ v4_subnet_mask }}"
+	},
 """
 
 BOX = """   {{ name }} = {
 		"region": "{{ region }}",
 		"hostname": "{{ hostname }}",
+        "plan_id": "{{ plan_id }}"
         "vpcs": [{{ vpcs }}]
 	},
 """
@@ -39,6 +44,7 @@ class OpenTofu(InfrastructureManager, CommandLineManager):
         environment = jinja2.Environment()
         self.varsTemplate = environment.from_string(VARS)
         self.boxTemplate = environment.from_string(BOX)
+        self.peeringTemplate = environment.from_string(PEERING)
     
     def callInfManager(self):
         self._populateVars()
@@ -51,7 +57,9 @@ class OpenTofu(InfrastructureManager, CommandLineManager):
         if res.returncode != 0:
             raise Exception("Error applying OpenTofu plan")
 
-        print("\n\nSuccesfully created HPLMN and VPLMN machines!\n\n")
+        print("\n\nSuccesfully created the following machines:\n")
+        for box in self.config["boxes"]: print(f"- {box.upper()}") 
+        print("\n\n")
 
         self.readIPs()
 
@@ -72,8 +80,8 @@ class OpenTofu(InfrastructureManager, CommandLineManager):
             # only parse last line where outputs are stores
             outJson = loads(outFile.split("\n")[-2])
 
-            self.config["hplmn"]["public_ip"] = outJson["outputs"]["hplm_ip"]["value"]
-            self.config["vplmn"]["public_ip"] = outJson["outputs"]["vplm_ip"]["value"]
+            for box in self.config["boxes"]:
+                self.config["boxes"][box]["public_ip"] = outJson["outputs"]["instance_ips"]["value"][box]
         
 
     def _populateVars(self):
@@ -82,37 +90,44 @@ class OpenTofu(InfrastructureManager, CommandLineManager):
         with open(self.cwd / VARS_PATH, 'w') as f:
             try:
                 vpcNum = len(self.config["peering"])
-                boxNum = 2
-                boxes = ["hplmn", "vplmn"]
+                boxes = list(self.config["boxes"].keys())
+                boxNum = len(boxes)
                 
-                descriptions = "" 
+                peerings = "" 
                 for i in range(vpcNum):
-                    descriptions += f'vpc_link{i} = \"vpc for {self.config["peering"][i]}\",'
-                
-                instance = ""
-                for i in range(boxNum):
-                    box = boxes[i]
+                    if "description" not in self.config["peering"][i]:
+                        self.config["peering"][i]["description"] = f'vpc for {self.config["peering"][i]["members"]}'
+                    self.config["peering"][i]["description"] = f'\"{self.config["peering"][i]["description"]}\"'
 
+                    peerings += self.peeringTemplate.render(
+                        description=self.config["peering"][i]["description"],
+                        name=self.config["peering"][i]["name"],
+                        v4_subnet=self.config["peering"][i]["v4_subnet"],
+                        v4_subnet_mask=self.config["peering"][i]["v4_subnet_mask"],
+                        region=self.config["peering"][i]["region"]
+                    )
+                    peerings += '\n'
+
+                instance = ""
+                for box in boxes:
                     vpcs = ""
                     for j in range(vpcNum):
-                        if box in self.config["peering"][j]:
-                            vpcs += f'"vpc_link{j}",'
+                        if box in self.config["peering"][j]["members"]:
+                            vpcs += f'\"{self.config["peering"][j]["name"]}\",'
+                    
                     instance += self.boxTemplate.render(
                         name=box,
-                        region=self.config["vultr"][f"{box}_region"],
-                        hostname=self.config[box]["hostname"],
+                        region=self.config["boxes"][box]["vultr"]["region"],
+                        hostname=self.config["boxes"][box]["hostname"],
+                        plan_id=self.config["boxes"][box]["vultr"]["plan_id"],
                         vpcs=vpcs
                     )
 
                     instance += "\n"
                 
                 content = self.varsTemplate.render(
-                            descriptions=descriptions,
-                            vpc_v4_subnet_mask=self.config["vultr"]["vpc"]["v4_subnet_mask"],
-                            vpc_v4_subnet=self.config["vultr"]["vpc"]["v4_subnet"],
-                            vpc_region=self.config["vultr"]["vpc"]["region"],
-                            vultr_api_key=self.config["vultr"]["api_key"],
-                            vultr_plan_id=self.config["vultr"]["plan_id"],
+                            peerings=peerings,
+                            vultr_api_key=self.config["vultr_api_key"],
                             boxes=instance,
                             user_ssh_key=self.config["user_ssh_key"],
                             ansible_ssh_key=self.config["ansible_ssh_key"]

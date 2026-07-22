@@ -96,14 +96,11 @@ class Config(CommandLineManager):
             "a": ("arguments",),
             "B": ("B",),
             "P": ("P",),
+            "verbose": ("verbose",),
             "func": ("func",),
             "lines": ("lines",),
             "ogs_repo": ("ogs", "repo"),
             "ogs_version": ("ogs", "version"),
-            "hplmn_ip": ("hplmn", "private_ip"),
-            "vplmn_ip": ("vplmn", "private_ip"),
-            "h_region": ("vultr", "hplmn_region"),
-            "v_region": ("vultr", "vplmn_region"),
             "vultr_plan_id": ("vultr", "plan_id"),
             "vultr_api_key": ("vultr", "api_key"),
             "vpc_v4_subnet": ("vultr", "vpc", "v4_subnet"),
@@ -142,13 +139,12 @@ class Config(CommandLineManager):
         # General Arguments
         self.parser.add_argument("-c", "--config", help="Gives the path to the config file that outlines all of the information necessary to configure the VMs")
         self.parser.add_argument("-r", "--run", help="Gives the path to the a file that describes a sequence of commands to be run in the VMs")
+        self.parser.add_argument("-v", "--verbose", action='store_true', help="Gives the option to run a TUI that displays some logs alongside test execution")
         self.parser.add_argument("--tui", action='store_true', help="Gives the option to run a TUI that displays some logs alongside test execution")
         self.parser.add_argument("--provider", help="The VM provider that is used (Vultr, VirtualBox, VMWare, QEMU)")
         self.parser.add_argument("--ogs_repo", help="The Open5GS repo that is installed to the VMs")
         self.parser.add_argument("--ogs_version", help="The version (branch) of the Open5GS repo that is cloned")
         self.parser.add_argument("--user_ssh_key", help="An ssh key automatically added to the authorized keys in the VMs")
-        self.parser.add_argument("--hplmn_ip", help="The VPC ip of the home network")
-        self.parser.add_argument("--vplmn_ip", help="The VPC ip of the visited network")
         self.parser.add_argument("--create_services", action='store_true', help="Creates service files for OGS components in /etc/system/systemd")
         self.parser.add_argument("--copy_logs", action='store_true', help="Copies logs from VMs into local machine")
         self.parser.add_argument("--capture_packets", action='store_true', help="Captures network packets from the VMs during testing and copies them over to the host machine")
@@ -160,8 +156,6 @@ class Config(CommandLineManager):
         self.parser.add_argument("--cpu", help="The amount of CPU allocated to the VMs (LOCAL ONLY)")
 
         # Vultr Arguments
-        self.parser.add_argument("--h_region", help="The region where the home VM is created")
-        self.parser.add_argument("--v_region", help="The region where the visited VM is created")
         self.parser.add_argument("--vpc_region", help="The region where the virutal private network is created")
         self.parser.add_argument("--vultr_api_key", help="Personal Vultr API key")
         self.parser.add_argument("--vultr_plan_id", help="The plan used to create the VMs")
