@@ -189,7 +189,9 @@ A timeout and polling time can also be specified with each command. The default 
 
 #### Gathering Results: 
 
-- When a command is repeated multiple times, its output is not printed to the terminal but is recorded in the output file. Simultaneously, the time of execution of each command is recorded in a .csv file.
+- Scripts do not automatically record timing, so when they are repeated multiple times, the original script is modified to compare start and end times of execution. This is can be observed at the end of the stdout with a "__TIME__" flag.
+
+- When a task is repeated multiple times from the run file, its output is not printed to the terminal but is recorded in the output file. Simultaneously, the time of execution of each task is recorded in a .csv file. 
 
 - Before testing begins, a tcpdump command starts capturing all interfaces for the VMs listed in the run file. After testing, the resulting pcap file is copied to the host machine.
 

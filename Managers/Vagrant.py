@@ -75,7 +75,7 @@ class Vagrant(InfrastructureManager, CommandLineManager):
             disk=self.config["boxes"][box]["vagrant"]["disk"],
             cpu=self.config["boxes"][box]["vagrant"]["cpu"]
           )
-          boxes += "\n"
+          boxes += "\n\n"
 
         content = self.varsTemplate.render(
             provider=self.config["provider"],

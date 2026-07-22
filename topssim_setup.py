@@ -164,6 +164,9 @@ class setupTOPSSIM(CommandLineManager):
 
         self.config["ogs_boxes"] = []
         for box in self.config["boxes"]:
+            if "private_ip" not in self.config["boxes"][box]:
+                self.config["boxes"][box]["private_ip"] = {}
+                
             if "config" in self.config["boxes"][box].keys() and self.config["boxes"][box]["config"] in self.config["configs"]:
                 tmp = {}
                 self.dictCopy(self.config["boxes"][box], tmp)

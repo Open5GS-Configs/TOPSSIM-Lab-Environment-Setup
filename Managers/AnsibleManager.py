@@ -1,7 +1,8 @@
 import jinja2
 import csv 
+import sys
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from yaml import dump
 from json import loads
 from pathlib import Path
@@ -184,7 +185,7 @@ class AnsibleManager(CommandLineManager):
 
         for cmd in self.run:
             cmdKeys = cmd.keys()
-
+            script = False
             if "where" not in cmdKeys:
                 continue
 
@@ -205,6 +206,7 @@ class AnsibleManager(CommandLineManager):
                 
             
             if "script" in cmd:
+                script = True
                 cmd["module"] = "script"
                 cmd["cmd"] = cmd["script"]
 
@@ -226,37 +228,75 @@ class AnsibleManager(CommandLineManager):
             agg = {}
             timestamps = {}
             finished = True
-            for r in range(repeats):
-                if cmd["module"] != "script":
-                    res = self.runAdHocCommand(cmd["where"], cmd["module"], cmd["cmd"], name, B=cmd['timeout'], P=cmd['poll'], capture_output=repeatRun, text=repeatRun)
+            try:
+                execScript = Path()
+                if repeatRun and script:
+                    scriptPath = Path(cmd["cmd"])
+                    with open(scriptPath, "r") as f:
+                        script = f.readlines()
+                        # empty script
+                        if len(script) == 0: continue
+
+                        if script[0][0] != "#" and scriptPath.suffix == ".sh":
+                            script.insert(0, "#!/bin/bash\n")
+
+                        script.insert(1, "start=$(date +%s.%N)\n")
+                        script.append("end=$(date +%s.%N)\n")
+                        script.append('echo "__TIME__=$(echo "$end - $start" | bc)"')
+
+                        execScript = self.cwd / Path("Managers/tmp") / scriptPath.name
+                        with open(execScript, "w") as modifiedScript:
+                            modifiedScript.writelines(script)
                 else:
-                    res = self.runAdHocCommand(cmd["where"], cmd["module"], cmd["cmd"], name, capture_output=repeatRun, text=repeatRun)
-                
-                if res.returncode != 0: 
-                    self.consolePrint("[red bold] Error [/] presented by command: " + cmd["cmd"])
-                    finished = False
-                    break
+                    execScript = cmd["cmd"]
 
-                clIdx = 0
-                if repeatRun:
-                    stdout = res.stdout.split(" => ")
-                    for i in range(1, len(stdout)):
-                        vm = stdout[i-1][clIdx:].split(" | ")[0].split("\n")[-1]
-                        clIdx = stdout[i].rfind("}")
-
-                        deltaTime = datetime.strptime(loads(stdout[i][:clIdx+1])["delta"], DATE_FORMAT)  
-                        timeSec = deltaTime.second + deltaTime.microsecond / (10**6)
-                        agg[vm] = timeSec if (vm not in agg.keys()) else (agg[vm] + timeSec)
-
-                        cmdID = vm + "_" + cmd["cmd"]
-                        if vm not in timestamps.keys(): timestamps[vm] = {} 
-                        timestamps[vm]["command"] = cmdID
-                        timestamps[vm]["rep" + str(r)] = timeSec
+                for r in range(repeats):
+                    if not script:
+                        res = self.runAdHocCommand(cmd["where"], cmd["module"], cmd["cmd"], name, B=cmd['timeout'], P=cmd['poll'], capture_output=repeatRun, text=repeatRun)
+                    else:
+                        res = self.runAdHocCommand(cmd["where"], cmd["module"], str(execScript), name, capture_output=repeatRun, text=repeatRun)
                     
-                    if self.config["write_test_output"]:
-                        with open(output_dir / "output.txt", "a") as f:
-                            f.write(res.stdout)
-            
+                    if res.returncode != 0: 
+                        self.consolePrint("[red bold] Error [/] presented by command: " + cmd["cmd"])
+                        finished = False
+                        break
+
+                    clIdx = 0
+                    if repeatRun:
+                        stdout = res.stdout.split(" => ")
+                        for i in range(1, len(stdout)):
+                            vm = stdout[i-1][clIdx:].split(" | ")[0].split("\n")[-1]
+                            clIdx = stdout[i].rfind("}")
+
+                            if not script: 
+                                delta = loads(stdout[i][:clIdx+1])["delta"]
+                                h, m, s = delta.split(":")
+                            else: 
+                                time = loads(stdout[i][:clIdx+1])['stdout_lines'][-1]
+                                if "__TIME__" not in time: raise Exception("__TIME__ indicator was not found in script execution")
+                                h, m, s = 0,0,float(time.split('=')[-1])
+
+                            timeSec = timedelta(
+                                hours=int(h),
+                                minutes=int(m),
+                                seconds=float(s)
+                            ).total_seconds()
+                            agg[vm] = timeSec if (vm not in agg.keys()) else (agg[vm] + timeSec)
+
+                            cmdID = vm + "_" + cmd["cmd"]
+                            if vm not in timestamps.keys(): timestamps[vm] = {} 
+                            timestamps[vm]["command"] = cmdID
+                            timestamps[vm]["rep" + str(r)] = timeSec
+                        
+                        if self.config["write_test_output"]:
+                            with open(output_dir / "output.txt", "a") as f:
+                                f.write(res.stdout)
+            except Exception as e:
+                print(e)
+                sys.exit(1)
+            finally:
+                if script: Path(execScript).unlink(missing_ok=True)
+
             if repeatRun and finished:
                 self.consoleRule(f"\n[bold]Executed [/]: [dark_orange italic]{cmd['cmd']}[/]")
                 self.consolePrint(f"[spring_green4]Repetitions [/]: {repeats}\nAverage execution times were:")
